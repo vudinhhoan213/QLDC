@@ -1,13 +1,22 @@
-const { User } = require('../models');
+const { User } = require("../models");
+const bcrypt = require("bcryptjs");
 
 module.exports = {
   async create(data) {
-    const user = await User.create(data);
+    const payload = { ...data };
+    if (payload.password) {
+      payload.passwordHash = await bcrypt.hash(payload.password, 10);
+      delete payload.password;
+    }
+    const user = await User.create(payload);
     return user;
   },
   async getAll(filter = {}, options = {}) {
-    const { limit = 50, page = 1, sort = '-createdAt' } = options;
-    const docs = await User.find(filter).sort(sort).limit(limit).skip((page - 1) * limit);
+    const { limit = 50, page = 1, sort = "-createdAt" } = options;
+    const docs = await User.find(filter)
+      .sort(sort)
+      .limit(limit)
+      .skip((page - 1) * limit);
     const total = await User.countDocuments(filter);
     return { docs, total, page, limit };
   },
@@ -15,10 +24,14 @@ module.exports = {
     return User.findById(id);
   },
   async update(id, data) {
-    return User.findByIdAndUpdate(id, data, { new: true });
+    const payload = { ...data };
+    if (payload.password) {
+      payload.passwordHash = await bcrypt.hash(payload.password, 10);
+      delete payload.password;
+    }
+    return User.findByIdAndUpdate(id, payload, { new: true });
   },
   async delete(id) {
     return User.findByIdAndDelete(id);
   },
 };
-

@@ -91,5 +91,12 @@ module.exports = {
 
     return { proposal: doc };
   },
+  async getStats() {
+    const total = await RewardProposal.countDocuments();
+    const pending = await RewardProposal.countDocuments({ status: 'PENDING' });
+    const approved = await RewardProposal.countDocuments({ status: 'APPROVED' });
+    const rejected = await RewardProposal.countDocuments({ status: 'REJECTED' });
+    return { total, pending, approved, rejected };
+  },
 };
 
