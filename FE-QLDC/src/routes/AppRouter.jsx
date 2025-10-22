@@ -1,45 +1,39 @@
-"use client";
+"use client"
 
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
-import { ProtectedRoute } from "./ProtectedRoute";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"
+import { useAuth } from "../context/AuthContext"
+import { ProtectedRoute } from "./ProtectedRoute"
 
-// Public Pages
-import HomePage from "../pages/HomePage";
+// Pages
+import LoginPage from "../pages/login/LoginPage"
+import UnauthorizedPage from "../pages/UnauthorizedPage"
 
-// Auth Pages
-import LoginPage from "../pages/auth/LoginPage";
+// Leader Pages
+import LeaderDashboard from "../pages/leader/LeaderDashboard"
+import HouseholdManagement from "../pages/leader/HouseholdManagement"
+import CitizenManagement from "../pages/leader/CitizenManagement"
+import EditRequestReview from "../pages/leader/EditRequestReview"
+import RewardProposalReview from "../pages/leader/RewardProposalReview"
+import AuditLogs from "../pages/leader/AuditLogs"
 
-// Dashboard Pages
-import LeaderDashboard from "../pages/dashboard/LeaderDashboard";
-import CitizenDashboard from "../pages/dashboard/CitizenDashboard";
+// Citizen Pages
+import CitizenDashboard from "../pages/citizen/CitizenDashboard"
+import MyHousehold from "../pages/citizen/MyHousehold"
+import SubmitEditRequest from "../pages/citizen/SubmitEditRequest"
+import SubmitRewardProposal from "../pages/citizen/SubmitRewardProposal"
+import MyRequests from "../pages/citizen/MyRequests"
+import MyRewards from "../pages/citizen/MyRewards"
 
-// Leader Pages (Old - sẽ migrate dần)
-import HouseholdManagement from "../pages/leader/HouseholdManagement";
-import CitizenManagement from "../pages/leader/CitizenManagement";
-import EditRequestReview from "../pages/leader/EditRequestReview";
-import RewardProposalReview from "../pages/leader/RewardProposalReview";
-import AuditLogs from "../pages/leader/AuditLogs";
-
-// Citizen Pages (Old - sẽ migrate dần)
-import MyHousehold from "../pages/citizen/MyHousehold";
-import SubmitEditRequest from "../pages/citizen/SubmitEditRequest";
-import SubmitRewardProposal from "../pages/citizen/SubmitRewardProposal";
-import MyRequests from "../pages/citizen/MyRequests";
-import MyRewards from "../pages/citizen/MyRewards";
-
-// Error Pages
-import NotFoundPage from "../pages/errors/NotFoundPage";
-import UnauthorizedPage from "../pages/errors/UnauthorizedPage";
+// Shared Pages
+import NotFound from "../pages/NotFound"
 
 const AppRouter = () => {
-  const { user } = useAuth();
+  const { user } = useAuth()
 
   return (
     <BrowserRouter>
       <Routes>
         {/* Public Routes */}
-        <Route path="/home" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/unauthorized" element={<UnauthorizedPage />} />
 
@@ -148,25 +142,18 @@ const AppRouter = () => {
           path="/"
           element={
             user ? (
-              <Navigate
-                to={
-                  user.role === "TO_TRUONG"
-                    ? "/leader/dashboard"
-                    : "/citizen/dashboard"
-                }
-                replace
-              />
+              <Navigate to={user.role === "leader" ? "/leader/dashboard" : "/citizen/dashboard"} replace />
             ) : (
-              <HomePage />
+              <Navigate to="/login" replace />
             )
           }
         />
 
         {/* 404 Not Found */}
-        <Route path="*" element={<NotFoundPage />} />
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>
-  );
-};
+  )
+}
 
-export default AppRouter;
+export default AppRouter

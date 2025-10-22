@@ -24,9 +24,5 @@ module.exports = {
   async delete(id) {
     return Household.findByIdAndDelete(id);
   },
-  async getStats() {
-    const total = await Household.countDocuments();
-    return { total };
-  },
 };
 

@@ -4,8 +4,6 @@ const { authenticate, isLeader, isCitizen } = require('../middleware/auth');
 
 const router = express.Router();
 
-// Stats route must come before /:id
-router.get('/stats', authenticate, editRequestController.getStats);
 router.get('/', authenticate, isLeader, editRequestController.getAll);
 router.get('/:id', authenticate, editRequestController.getById);
 router.post('/', authenticate, isCitizen, editRequestController.create);
