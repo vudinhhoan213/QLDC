@@ -24,5 +24,9 @@ module.exports = {
   async delete(id) {
     return Citizen.findByIdAndDelete(id);
   },
+  async getStats() {
+    const total = await Citizen.countDocuments();
+    return { total };
+  },
 };
 

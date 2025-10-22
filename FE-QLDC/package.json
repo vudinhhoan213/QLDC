@@ -8,9 +8,12 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@ant-design/icons": "^6.1.0",
+    "antd": "^5.27.6",
     "axios": "latest",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "dayjs": "^1.11.18",
     "formik": "latest",
     "jiti": "latest",
     "less": "latest",
@@ -33,11 +36,11 @@
     "yup": "latest"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "latest",
     "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^4.2.1",
-    "@tailwindcss/postcss": "latest",
     "autoprefixer": "^10.4.20",
     "postcss": "^8.5",
     "tailwindcss": "^4.1.9",

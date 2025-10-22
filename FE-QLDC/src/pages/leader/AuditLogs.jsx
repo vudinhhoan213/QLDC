@@ -1,41 +1,190 @@
-"use client"
+import React, { useState } from "react";
+import {
+  Card,
+  Table,
+  Input,
+  Space,
+  Tag,
+  Typography,
+  DatePicker,
+  Select,
+} from "antd";
+import {
+  SearchOutlined,
+  AuditOutlined,
+  UserOutlined,
+  FileTextOutlined,
+} from "@ant-design/icons";
+import Layout from "../../components/Layout";
+import dayjs from "dayjs";
 
-import { useNavigate } from "react-router-dom"
-import { useAuth } from "../../context/AuthContext"
+const { Title } = Typography;
+const { RangePicker } = DatePicker;
+const { Option } = Select;
 
 const AuditLogs = () => {
-  const navigate = useNavigate()
-  const { logout } = useAuth()
+  const [loading, setLoading] = useState(false);
+  const [searchText, setSearchText] = useState("");
+  const [selectedAction, setSelectedAction] = useState("all");
 
-  const handleLogout = () => {
-    logout()
-    navigate("/login")
-  }
+  // Mock data
+  const logs = [
+    {
+      key: "1",
+      id: "LOG-001",
+      user: "Admin",
+      action: "CREATE",
+      entity: "Household",
+      entityId: "HK-001",
+      description: "Tạo hộ khẩu mới HK-001",
+      timestamp: "2024-10-20 14:30:00",
+      ip: "192.168.1.1",
+    },
+    {
+      key: "2",
+      id: "LOG-002",
+      user: "Admin",
+      action: "UPDATE",
+      entity: "Citizen",
+      entityId: "NK-001",
+      description: "Cập nhật thông tin nhân khẩu NK-001",
+      timestamp: "2024-10-20 13:15:00",
+      ip: "192.168.1.1",
+    },
+    {
+      key: "3",
+      id: "LOG-003",
+      user: "User123",
+      action: "APPROVE",
+      entity: "EditRequest",
+      entityId: "REQ-001",
+      description: "Phê duyệt yêu cầu chỉnh sửa REQ-001",
+      timestamp: "2024-10-19 10:45:00",
+      ip: "192.168.1.2",
+    },
+  ];
+
+  const actionConfig = {
+    CREATE: { color: "green", text: "Tạo mới" },
+    UPDATE: { color: "blue", text: "Cập nhật" },
+    DELETE: { color: "red", text: "Xóa" },
+    APPROVE: { color: "cyan", text: "Phê duyệt" },
+    REJECT: { color: "orange", text: "Từ chối" },
+  };
+
+  const columns = [
+    {
+      title: "Thời gian",
+      dataIndex: "timestamp",
+      key: "timestamp",
+      width: 180,
+      render: (text) => dayjs(text).format("DD/MM/YYYY HH:mm:ss"),
+    },
+    {
+      title: "Người dùng",
+      dataIndex: "user",
+      key: "user",
+      render: (text) => (
+        <Space>
+          <UserOutlined />
+          {text}
+        </Space>
+      ),
+    },
+    {
+      title: "Hành động",
+      dataIndex: "action",
+      key: "action",
+      render: (action) => {
+        const config = actionConfig[action];
+        return <Tag color={config.color}>{config.text}</Tag>;
+      },
+    },
+    {
+      title: "Đối tượng",
+      dataIndex: "entity",
+      key: "entity",
+    },
+    {
+      title: "Mã đối tượng",
+      dataIndex: "entityId",
+      key: "entityId",
+    },
+    {
+      title: "Mô tả",
+      dataIndex: "description",
+      key: "description",
+    },
+    {
+      title: "IP Address",
+      dataIndex: "ip",
+      key: "ip",
+    },
+  ];
+
+  const filteredLogs = logs.filter((log) => {
+    const matchSearch = Object.values(log).some((value) =>
+      value.toString().toLowerCase().includes(searchText.toLowerCase())
+    );
+    const matchAction =
+      selectedAction === "all" || log.action === selectedAction;
+    return matchSearch && matchAction;
+  });
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-4">
-            <button onClick={() => navigate("/leader/dashboard")} className="text-blue-600 hover:text-blue-800">
-              ← Quay lại
-            </button>
-            <h1 className="text-2xl font-bold text-gray-800">Nhật Ký Kiểm Toán</h1>
-          </div>
-          <button onClick={handleLogout} className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded">
-            Đăng xuất
-          </button>
+    <Layout>
+      <div>
+        <div style={{ marginBottom: 24 }}>
+          <Title level={2} style={{ marginBottom: 8 }}>
+            <AuditOutlined /> Nhật Ký Hệ Thống
+          </Title>
         </div>
-      </nav>
 
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-bold mb-4">Lịch Sử Hoạt Động</h2>
-          <p className="text-gray-600">Lịch sử hoạt động sẽ được hiển thị tại đây</p>
-        </div>
+        <Card bordered={false} style={{ marginBottom: 16 }}>
+          <Space style={{ width: "100%", justifyContent: "space-between" }}>
+            <Space>
+              <Input
+                placeholder="Tìm kiếm..."
+                prefix={<SearchOutlined />}
+                style={{ width: 250 }}
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+                allowClear
+              />
+              <Select
+                style={{ width: 150 }}
+                value={selectedAction}
+                onChange={setSelectedAction}
+              >
+                <Option value="all">Tất cả</Option>
+                <Option value="CREATE">Tạo mới</Option>
+                <Option value="UPDATE">Cập nhật</Option>
+                <Option value="DELETE">Xóa</Option>
+                <Option value="APPROVE">Phê duyệt</Option>
+                <Option value="REJECT">Từ chối</Option>
+              </Select>
+              <RangePicker format="DD/MM/YYYY" />
+            </Space>
+          </Space>
+        </Card>
+
+        <Card bordered={false}>
+          <Table
+            columns={columns}
+            dataSource={filteredLogs}
+            loading={loading}
+            pagination={{
+              total: filteredLogs.length,
+              pageSize: 20,
+              showSizeChanger: true,
+              showTotal: (total) => `Tổng ${total} bản ghi`,
+            }}
+            scroll={{ x: 1400 }}
+          />
+        </Card>
       </div>
-    </div>
-  )
-}
+    </Layout>
+  );
+};
 
-export default AuditLogs
+export default AuditLogs;

@@ -108,5 +108,12 @@ module.exports = {
 
     return { request: reqDoc };
   },
+  async getStats() {
+    const total = await EditRequest.countDocuments();
+    const pending = await EditRequest.countDocuments({ status: 'PENDING' });
+    const approved = await EditRequest.countDocuments({ status: 'APPROVED' });
+    const rejected = await EditRequest.countDocuments({ status: 'REJECTED' });
+    return { total, pending, approved, rejected };
+  },
 };
 

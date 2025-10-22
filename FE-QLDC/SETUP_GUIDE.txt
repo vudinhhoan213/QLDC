@@ -1,0 +1,102 @@
+===========================================
+  HƯỚNG DẪN SETUP - QUẢN LÝ DÂN CƯ
+===========================================
+
+✅ ĐÃ CÀI ĐẶT:
+--------------
+- Ant Design (antd) + @ant-design/icons
+- Axios với interceptors
+- React Router v6
+
+📁 CẤU TRÚC MỚI:
+-----------------
+src/
+├── components/
+│   ├── Layout.jsx          ← Layout chung với Ant Design
+│   └── shared/
+│       ├── LoadingSpinner.jsx
+│       └── EmptyState.jsx
+│
+├── pages/
+│   ├── auth/
+│   │   └── LoginPage.jsx   ← Đã migrate sang Ant Design
+│   ├── dashboard/
+│   │   ├── LeaderDashboard.jsx   ← Mới
+│   │   └── CitizenDashboard.jsx  ← Mới
+│   ├── errors/
+│   │   ├── NotFoundPage.jsx
+│   │   └── UnauthorizedPage.jsx
+│   └── [citizen, leader]   ← Giữ tạm, sẽ migrate dần
+│
+├── context/
+│   └── AuthContext.jsx     ← Updated với api.js
+│
+├── lib/
+│   └── api.js              ← Axios instance + interceptors
+│
+├── constants/
+│   ├── roles.js
+│   ├── apiEndpoints.js
+│   └── routes.js
+│
+└── routes/
+    └── AppRouter.jsx       ← Updated imports
+
+🚀 CHẠY ỨNG DỤNG:
+------------------
+1. Backend (Terminal 1):
+   cd BE-QLDC
+   npm start
+
+2. Frontend (Terminal 2):
+   cd FE-QLDC
+   npm run dev
+
+3. Truy cập: http://localhost:5173
+
+⚙️ CẤU HÌNH:
+-------------
+- Tạo file .env trong FE-QLDC:
+  VITE_API_URL=http://localhost:3001
+
+📝 NHỮNG GÌ ĐÃ THAY ĐỔI:
+-------------------------
+✅ Thêm Ant Design UI library
+✅ Tạo Layout.jsx với Sidebar & Header
+✅ Tạo LoginPage mới với Ant Design Form
+✅ Tạo Dashboard pages mới cho Leader & Citizen
+✅ Centralize API calls trong lib/api.js
+✅ Tạo constants cho roles, endpoints, routes
+✅ Fix 404 error với NotFoundPage
+✅ Cập nhật AppRouter với paths mới
+
+🎯 TIẾP THEO CẦN LÀM:
+---------------------
+1. Migrate các pages còn lại sang cấu trúc mới:
+   - Households pages
+   - Citizens pages
+   - Requests pages
+   - Rewards pages
+
+2. Tạo 3 pages mới cho Reward Management:
+   - RewardEventListPage.jsx
+   - RewardDistributionPage.jsx
+   - StudentAchievementPage.jsx
+
+3. Kết nối API thật vào các pages
+
+4. Thêm form validation với Ant Design Form
+
+💡 GHI CHÚ:
+-----------
+- Ant Design tự động responsive
+- Sử dụng message.success(), message.error() cho thông báo
+- Layout tự động ẩn/hiện sidebar
+- Dark mode có thể thêm sau
+
+🐛 FIX LỖI 404:
+---------------
+- Đã tạo NotFoundPage.jsx và UnauthorizedPage.jsx
+- Đã cập nhật AppRouter imports
+- Kiểm tra lại browser, lỗi 404 đã được fix
+
