@@ -366,13 +366,18 @@ const HouseholdManagement = () => {
   );
 
   return (
-    <Layout>
-      <div>
-        {/* Page Header */}
-        <div style={{ marginBottom: 24 }}>
-          <Title level={2} style={{ marginBottom: 8 }}>
-            Quản Lý Hộ Khẩu
-          </Title>
+    <div className="min-h-screen bg-gray-50">
+      <nav className="bg-white shadow">
+        <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+          <div className="flex items-center gap-4">
+            <button onClick={() => navigate("/leader/dashboard")} className="text-blue-600 hover:text-blue-800">
+              ← Quay lại
+            </button>
+            <h1 className="text-2xl font-bold text-gray-800">Quản Lý Hộ Khẩu</h1>
+          </div>
+          <button onClick={handleLogout} className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded">
+            Đăng xuất
+          </button>
         </div>
 
         {/* Action Bar */}
@@ -714,8 +719,8 @@ const HouseholdManagement = () => {
           </Form>
         </Modal>
       </div>
-    </Layout>
-  );
-};
+    </div>
+  )
+}
 
-export default HouseholdManagement;
+export default HouseholdManagement

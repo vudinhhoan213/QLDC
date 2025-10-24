@@ -126,8 +126,4 @@ module.exports = {
 
     return deletedHousehold;
   },
-  async getStats() {
-    const total = await Household.countDocuments();
-    return { total };
-  },
 };

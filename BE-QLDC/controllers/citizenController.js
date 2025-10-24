@@ -127,12 +127,4 @@ module.exports = {
       next(err);
     }
   },
-  async getStats(req, res, next) {
-    try {
-      const stats = await citizenService.getStats();
-      res.json(stats);
-    } catch (err) {
-      next(err);
-    }
-  },
 };
