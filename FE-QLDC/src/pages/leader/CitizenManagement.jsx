@@ -1,37 +1,7 @@
-import React, { useState, useEffect } from "react";
-import {
-  Card,
-  Table,
-  Button,
-  Input,
-  Space,
-  Tag,
-  Typography,
-  Modal,
-  Form,
-  Select,
-  DatePicker,
-  message,
-  Popconfirm,
-  Avatar,
-} from "antd";
-import {
-  PlusOutlined,
-  SearchOutlined,
-  EditOutlined,
-  DeleteOutlined,
-  EyeOutlined,
-  UserOutlined,
-  ManOutlined,
-  WomanOutlined,
-} from "@ant-design/icons";
-import { useNavigate } from "react-router-dom";
-import Layout from "../../components/Layout";
-import { citizenService, householdService } from "../../services";
-import dayjs from "dayjs";
+"use client"
 
-const { Title } = Typography;
-const { Option } = Select;
+import { useNavigate } from "react-router-dom"
+import { useAuth } from "../../context/AuthContext"
 
 const CitizenManagement = () => {
   const navigate = useNavigate();
@@ -317,13 +287,18 @@ const CitizenManagement = () => {
   );
 
   return (
-    <Layout>
-      <div>
-        {/* Page Header */}
-        <div style={{ marginBottom: 24 }}>
-          <Title level={2} style={{ marginBottom: 8 }}>
-            Quản Lý Nhân Khẩu
-          </Title>
+    <div className="min-h-screen bg-gray-50">
+      <nav className="bg-white shadow">
+        <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+          <div className="flex items-center gap-4">
+            <button onClick={() => navigate("/leader/dashboard")} className="text-blue-600 hover:text-blue-800">
+              ← Quay lại
+            </button>
+            <h1 className="text-2xl font-bold text-gray-800">Quản Lý Công Dân</h1>
+          </div>
+          <button onClick={handleLogout} className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded">
+            Đăng xuất
+          </button>
         </div>
 
         {/* Action Bar */}
@@ -644,8 +619,8 @@ const CitizenManagement = () => {
           </Form>
         </Modal>
       </div>
-    </Layout>
-  );
-};
+    </div>
+  )
+}
 
-export default CitizenManagement;
+export default CitizenManagement
