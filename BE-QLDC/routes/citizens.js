@@ -9,7 +9,7 @@ router.get("/me", authenticate, citizenController.getMe);
 router.get("/me/household", authenticate, citizenController.getMyHousehold);
 
 // Stats route must come before /:id
-router.get("/stats", authenticate, citizenController.getStats);
+// router.get("/stats", authenticate, citizenController.getStats); // TODO: Implement getStats if needed
 router.get("/", authenticate, citizenController.getAll);
 router.get("/:id", authenticate, citizenController.getById);
 router.post("/", authenticate, isLeader, citizenController.create);

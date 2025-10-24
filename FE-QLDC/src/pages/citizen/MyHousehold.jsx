@@ -183,12 +183,20 @@ const MyHousehold = () => {
       <nav className="bg-white shadow">
         <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center gap-4">
-            <button onClick={() => navigate("/citizen/dashboard")} className="text-blue-600 hover:text-blue-800">
+            <button
+              onClick={() => navigate("/citizen/dashboard")}
+              className="text-blue-600 hover:text-blue-800"
+            >
               ← Quay lại
             </button>
-            <h1 className="text-2xl font-bold text-gray-800">Hộ Khẩu Của Tôi</h1>
+            <h1 className="text-2xl font-bold text-gray-800">
+              Hộ Khẩu Của Tôi
+            </h1>
           </div>
-          <button onClick={handleLogout} className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded">
+          <button
+            onClick={handleLogout}
+            className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded"
+          >
             Đăng xuất
           </button>
         </div>
@@ -265,9 +273,9 @@ const MyHousehold = () => {
             scroll={{ x: 1000 }}
           />
         </Card>
-      </div>
+      </nav>
     </div>
-  )
-}
+  );
+};
 
-export default MyHousehold
+export default MyHousehold;

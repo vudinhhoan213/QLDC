@@ -1,7 +1,7 @@
-"use client"
+"use client";
 
-import { useNavigate } from "react-router-dom"
-import { useAuth } from "../../context/AuthContext"
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
 
 const CitizenManagement = () => {
   const navigate = useNavigate();
@@ -291,12 +291,20 @@ const CitizenManagement = () => {
       <nav className="bg-white shadow">
         <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center gap-4">
-            <button onClick={() => navigate("/leader/dashboard")} className="text-blue-600 hover:text-blue-800">
+            <button
+              onClick={() => navigate("/leader/dashboard")}
+              className="text-blue-600 hover:text-blue-800"
+            >
               ← Quay lại
             </button>
-            <h1 className="text-2xl font-bold text-gray-800">Quản Lý Công Dân</h1>
+            <h1 className="text-2xl font-bold text-gray-800">
+              Quản Lý Công Dân
+            </h1>
           </div>
-          <button onClick={handleLogout} className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded">
+          <button
+            onClick={handleLogout}
+            className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded"
+          >
             Đăng xuất
           </button>
         </div>
@@ -618,9 +626,9 @@ const CitizenManagement = () => {
             </Form.Item>
           </Form>
         </Modal>
-      </div>
+      </nav>
     </div>
-  )
-}
+  );
+};
 
-export default CitizenManagement
+export default CitizenManagement;
