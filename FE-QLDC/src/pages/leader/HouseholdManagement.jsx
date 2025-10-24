@@ -370,6 +370,7 @@ const HouseholdManagement = () => {
       <nav className="bg-white shadow">
         <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center gap-4">
+<<<<<<< HEAD
             <button
               onClick={() => navigate("/leader/dashboard")}
               className="text-blue-600 hover:text-blue-800"
@@ -384,6 +385,14 @@ const HouseholdManagement = () => {
             onClick={handleLogout}
             className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded"
           >
+=======
+            <button onClick={() => navigate("/leader/dashboard")} className="text-blue-600 hover:text-blue-800">
+              ← Quay lại
+            </button>
+            <h1 className="text-2xl font-bold text-gray-800">Quản Lý Hộ Khẩu</h1>
+          </div>
+          <button onClick={handleLogout} className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded">
+>>>>>>> 4a0a33dfece39de1d31ff3599a83dec6fd6f10a4
             Đăng xuất
           </button>
         </div>
@@ -726,9 +735,16 @@ const HouseholdManagement = () => {
             </Form.Item>
           </Form>
         </Modal>
+<<<<<<< HEAD
       </nav>
     </div>
   );
 };
+=======
+      </div>
+    </div>
+  )
+}
+>>>>>>> 4a0a33dfece39de1d31ff3599a83dec6fd6f10a4
 
-export default HouseholdManagement;
+export default HouseholdManagement
