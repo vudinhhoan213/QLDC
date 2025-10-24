@@ -38,7 +38,9 @@ const CitizenManagement = () => {
   const [loading, setLoading] = useState(true);
   const [searchText, setSearchText] = useState("");
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [isViewModalVisible, setIsViewModalVisible] = useState(false);
   const [editingCitizen, setEditingCitizen] = useState(null);
+  const [viewingCitizen, setViewingCitizen] = useState(null);
   const [form] = Form.useForm();
   const [citizens, setCitizens] = useState([]);
   const [households, setHouseholds] = useState([]);
@@ -191,10 +193,12 @@ const CitizenManagement = () => {
             Sửa
           </Button>
           <Popconfirm
-            title="Bạn có chắc muốn xóa nhân khẩu này?"
+            title="⚠️ Xóa vĩnh viễn nhân khẩu này?"
+            description="Dữ liệu sẽ bị xóa hoàn toàn khỏi hệ thống và không thể khôi phục!"
             onConfirm={() => handleDelete(record.key)}
-            okText="Xóa"
+            okText="Xóa vĩnh viễn"
             cancelText="Hủy"
+            okButtonProps={{ danger: true }}
           >
             <Button type="link" size="small" danger icon={<DeleteOutlined />}>
               Xóa
@@ -206,7 +210,8 @@ const CitizenManagement = () => {
   ];
 
   const handleView = (record) => {
-    navigate(`/leader/citizens/${record.id}`);
+    setViewingCitizen(record);
+    setIsViewModalVisible(true);
   };
 
   const handleEdit = (record) => {
@@ -214,12 +219,12 @@ const CitizenManagement = () => {
     form.setFieldsValue({
       fullName: record.fullName,
       dateOfBirth: dayjs(record.dateOfBirth),
-      gender: record.gender, // Already converted to "Nam"/"Nữ"
+      gender: record.gender, // "Nam" or "Nữ" - đúng cho Select
       idCard: record.idCard,
       household: record.householdId,
       relationship: record.relationship,
       phone: record.phone,
-      status: record.status, // Already converted to "active"/"inactive"
+      status: record.status, // "active" or "inactive" - đúng cho Select
     });
     setIsModalVisible(true);
   };
@@ -227,11 +232,16 @@ const CitizenManagement = () => {
   const handleDelete = async (key) => {
     try {
       await citizenService.delete(key);
-      message.success("Đã xóa nhân khẩu thành công");
+      message.success({
+        content: "✅ Đã xóa vĩnh viễn nhân khẩu khỏi hệ thống",
+        duration: 3,
+      });
       fetchCitizens(); // Refresh list
+      console.log(`🗑️ Deleted citizen: ${key}`);
     } catch (error) {
       console.error("Error deleting citizen:", error);
-      message.error("Không thể xóa nhân khẩu");
+      const errorMsg = error.response?.data?.message || error.message;
+      message.error(`Không thể xóa nhân khẩu: ${errorMsg}`);
     }
   };
 
@@ -255,11 +265,19 @@ const CitizenManagement = () => {
             ? "FEMALE"
             : "OTHER",
         nationalId: values.idCard, // Backend uses 'nationalId', not 'idCard'
-        household: values.household, // Backend uses 'household', not 'householdId'
-        relationshipToHead: values.relationship, // Backend uses 'relationshipToHead'
         phone: values.phone,
         status: values.status === "active" ? "ALIVE" : "MOVED_OUT",
       };
+
+      // Chỉ thêm household nếu có giá trị
+      if (values.household) {
+        citizenData.household = values.household;
+      }
+
+      // Chỉ thêm relationshipToHead nếu có giá trị
+      if (values.relationship) {
+        citizenData.relationshipToHead = values.relationship;
+      }
 
       if (editingCitizen) {
         // Update existing citizen
@@ -277,10 +295,11 @@ const CitizenManagement = () => {
       fetchCitizens(); // Refresh list
     } catch (error) {
       console.error("Error saving citizen:", error);
+      const errorMsg = error.response?.data?.message || error.message;
       message.error(
         editingCitizen
-          ? "Không thể cập nhật nhân khẩu"
-          : "Không thể thêm nhân khẩu mới"
+          ? `Không thể cập nhật: ${errorMsg}`
+          : `Không thể thêm mới: ${errorMsg}`
       );
     }
   };
@@ -339,6 +358,183 @@ const CitizenManagement = () => {
             scroll={{ x: 1400 }}
           />
         </Card>
+
+        {/* View Modal */}
+        <Modal
+          title={
+            <Space>
+              <Avatar
+                icon={
+                  viewingCitizen?.gender === "Nam" ? (
+                    <ManOutlined />
+                  ) : (
+                    <WomanOutlined />
+                  )
+                }
+                style={{
+                  backgroundColor:
+                    viewingCitizen?.gender === "Nam" ? "#1890ff" : "#eb2f96",
+                }}
+              />
+              <span>Thông Tin Nhân Khẩu - {viewingCitizen?.fullName}</span>
+            </Space>
+          }
+          open={isViewModalVisible}
+          onCancel={() => setIsViewModalVisible(false)}
+          footer={[
+            <Button key="close" onClick={() => setIsViewModalVisible(false)}>
+              Đóng
+            </Button>,
+            <Button
+              key="edit"
+              type="primary"
+              icon={<EditOutlined />}
+              onClick={() => {
+                setIsViewModalVisible(false);
+                handleEdit(viewingCitizen);
+              }}
+            >
+              Chỉnh sửa
+            </Button>,
+          ]}
+          width={800}
+        >
+          {viewingCitizen && (
+            <div style={{ padding: "10px 0" }}>
+              <Card
+                title="Thông tin cá nhân"
+                bordered={false}
+                style={{ marginBottom: 16 }}
+              >
+                <Space
+                  direction="vertical"
+                  size="middle"
+                  style={{ width: "100%" }}
+                >
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "1fr 1fr",
+                      gap: "16px",
+                    }}
+                  >
+                    <div>
+                      <strong style={{ color: "#666" }}>Họ và tên:</strong>
+                      <div style={{ fontSize: "16px", marginTop: "4px" }}>
+                        {viewingCitizen.fullName}
+                      </div>
+                    </div>
+                    <div>
+                      <strong style={{ color: "#666" }}>Mã nhân khẩu:</strong>
+                      <div style={{ fontSize: "16px", marginTop: "4px" }}>
+                        <Tag color="blue">{viewingCitizen.id}</Tag>
+                      </div>
+                    </div>
+                    <div>
+                      <strong style={{ color: "#666" }}>Ngày sinh:</strong>
+                      <div style={{ fontSize: "16px", marginTop: "4px" }}>
+                        {dayjs(viewingCitizen.dateOfBirth).format("DD/MM/YYYY")}
+                      </div>
+                    </div>
+                    <div>
+                      <strong style={{ color: "#666" }}>Giới tính:</strong>
+                      <div style={{ marginTop: "4px" }}>
+                        <Tag
+                          color={
+                            viewingCitizen.gender === "Nam" ? "blue" : "pink"
+                          }
+                        >
+                          {viewingCitizen.gender}
+                        </Tag>
+                      </div>
+                    </div>
+                    <div>
+                      <strong style={{ color: "#666" }}>CCCD/CMND:</strong>
+                      <div style={{ fontSize: "16px", marginTop: "4px" }}>
+                        {viewingCitizen.idCard || (
+                          <Tag color="default">Chưa có</Tag>
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <strong style={{ color: "#666" }}>Số điện thoại:</strong>
+                      <div style={{ fontSize: "16px", marginTop: "4px" }}>
+                        {viewingCitizen.phone || (
+                          <Tag color="default">Chưa có</Tag>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </Space>
+              </Card>
+
+              <Card
+                title="Thông tin hộ khẩu"
+                bordered={false}
+                style={{ marginBottom: 16 }}
+              >
+                <Space
+                  direction="vertical"
+                  size="middle"
+                  style={{ width: "100%" }}
+                >
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "1fr 1fr",
+                      gap: "16px",
+                    }}
+                  >
+                    <div>
+                      <strong style={{ color: "#666" }}>Hộ khẩu:</strong>
+                      <div style={{ fontSize: "16px", marginTop: "4px" }}>
+                        {viewingCitizen.household === "Chưa có hộ khẩu" ? (
+                          <Tag color="default">Chưa có hộ khẩu</Tag>
+                        ) : (
+                          <Tag color="blue">{viewingCitizen.household}</Tag>
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <strong style={{ color: "#666" }}>
+                        Quan hệ với chủ hộ:
+                      </strong>
+                      <div style={{ marginTop: "4px" }}>
+                        {viewingCitizen.relationship ? (
+                          <Tag color="purple">
+                            {viewingCitizen.relationship}
+                          </Tag>
+                        ) : (
+                          <Tag color="default">N/A</Tag>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </Space>
+              </Card>
+
+              <Card title="Trạng thái" bordered={false}>
+                <div>
+                  <strong style={{ color: "#666" }}>
+                    Trạng thái hiện tại:
+                  </strong>
+                  <div style={{ marginTop: "8px" }}>
+                    <Tag
+                      color={
+                        viewingCitizen.status === "active" ? "green" : "default"
+                      }
+                      style={{ fontSize: "14px", padding: "4px 12px" }}
+                    >
+                      {viewingCitizen.status === "active"
+                        ? "Hoạt động"
+                        : "Không hoạt động"}
+                    </Tag>
+                  </div>
+                </div>
+              </Card>
+            </div>
+          )}
+        </Modal>
 
         {/* Add/Edit Modal */}
         <Modal

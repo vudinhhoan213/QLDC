@@ -12,6 +12,9 @@ import {
   Select,
   message,
   Popconfirm,
+  Descriptions,
+  Avatar,
+  List,
 } from "antd";
 import {
   PlusOutlined,
@@ -20,6 +23,12 @@ import {
   DeleteOutlined,
   EyeOutlined,
   TeamOutlined,
+  UserOutlined,
+  HomeOutlined,
+  PhoneOutlined,
+  EnvironmentOutlined,
+  ManOutlined,
+  WomanOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import Layout from "../../components/Layout";
@@ -33,7 +42,9 @@ const HouseholdManagement = () => {
   const [loading, setLoading] = useState(true);
   const [searchText, setSearchText] = useState("");
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [isViewModalVisible, setIsViewModalVisible] = useState(false);
   const [editingHousehold, setEditingHousehold] = useState(null);
+  const [viewingHousehold, setViewingHousehold] = useState(null);
   const [form] = Form.useForm();
   const [households, setHouseholds] = useState([]);
   const [citizens, setCitizens] = useState([]);
@@ -168,10 +179,19 @@ const HouseholdManagement = () => {
             Sửa
           </Button>
           <Popconfirm
-            title="Bạn có chắc muốn xóa hộ khẩu này?"
+            title="⚠️ Xóa vĩnh viễn hộ khẩu này?"
+            description={
+              <div>
+                <div>Dữ liệu sẽ bị xóa hoàn toàn khỏi hệ thống!</div>
+                <div style={{ color: "#ff4d4f", marginTop: 4 }}>
+                  ⚠️ Các thành viên sẽ mất thông tin hộ khẩu
+                </div>
+              </div>
+            }
             onConfirm={() => handleDelete(record.key)}
-            okText="Xóa"
+            okText="Xóa vĩnh viễn"
             cancelText="Hủy"
+            okButtonProps={{ danger: true }}
           >
             <Button type="link" size="small" danger icon={<DeleteOutlined />}>
               Xóa
@@ -182,8 +202,20 @@ const HouseholdManagement = () => {
     },
   ];
 
-  const handleView = (record) => {
-    navigate(`/leader/households/${record.id}`);
+  const handleView = async (record) => {
+    // Fetch chi tiết household để lấy danh sách members
+    try {
+      const response = await householdService.getById(record.key);
+      setViewingHousehold({
+        ...record,
+        membersList: response.members || [],
+        headDetails: response.head,
+      });
+      setIsViewModalVisible(true);
+    } catch (error) {
+      console.error("Error fetching household details:", error);
+      message.error("Không thể tải thông tin hộ khẩu");
+    }
   };
 
   const handleEdit = (record) => {
@@ -204,11 +236,17 @@ const HouseholdManagement = () => {
   const handleDelete = async (key) => {
     try {
       await householdService.delete(key);
-      message.success("Đã xóa hộ khẩu thành công");
+      message.success({
+        content: "✅ Đã xóa vĩnh viễn hộ khẩu khỏi hệ thống",
+        duration: 3,
+      });
       fetchHouseholds(); // Refresh list
+      fetchCitizens(); // Refresh citizens too (để cập nhật các citizen đã bị xóa household)
+      console.log(`🗑️ Deleted household: ${key}`);
     } catch (error) {
       console.error("Error deleting household:", error);
-      message.error("Không thể xóa hộ khẩu");
+      const errorMsg = error.response?.data?.message || error.message;
+      message.error(`Không thể xóa hộ khẩu: ${errorMsg}`);
     }
   };
 
@@ -231,7 +269,7 @@ const HouseholdManagement = () => {
           district: values.district,
           city: values.city,
         },
-        phone: values.phone,
+        // phone không cần gửi - backend tự động lấy từ chủ hộ
         status: values.status,
       };
 
@@ -241,8 +279,59 @@ const HouseholdManagement = () => {
         message.success("Cập nhật hộ khẩu thành công");
       } else {
         // Create new household
-        await householdService.create(householdData);
-        message.success("Thêm hộ khẩu mới thành công");
+        const result = await householdService.create(householdData);
+
+        // Tìm thông tin chủ hộ để hiển thị thông tin đăng nhập
+        const headCitizen = citizens.find((c) => c._id === values.head);
+
+        if (headCitizen && headCitizen.phone) {
+          Modal.success({
+            title: "✅ Tạo hộ khẩu thành công!",
+            width: 500,
+            content: (
+              <div style={{ padding: "16px 0" }}>
+                <div
+                  style={{
+                    padding: "16px",
+                    background: "#f0f5ff",
+                    borderRadius: "8px",
+                    marginBottom: "16px",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: "16px",
+                      fontWeight: "bold",
+                      marginBottom: "12px",
+                      color: "#1890ff",
+                    }}
+                  >
+                    🔐 Tài khoản đăng nhập cho chủ hộ
+                  </div>
+                  <div style={{ marginBottom: "8px" }}>
+                    <span style={{ color: "#666" }}>📱 Username:</span>{" "}
+                    <strong style={{ fontSize: "16px", color: "#000" }}>
+                      {headCitizen.phone}
+                    </strong>
+                  </div>
+                  <div>
+                    <span style={{ color: "#666" }}>🔑 Password:</span>{" "}
+                    <strong style={{ fontSize: "16px", color: "#000" }}>
+                      123456
+                    </strong>
+                  </div>
+                </div>
+                <div style={{ fontSize: "13px", color: "#666" }}>
+                  ⚠️ <strong>Lưu ý:</strong> Chủ hộ có thể đăng nhập vào hệ
+                  thống citizen bằng số điện thoại và mật khẩu trên.
+                </div>
+              </div>
+            ),
+            okText: "Đã hiểu",
+          });
+        } else {
+          message.success("Thêm hộ khẩu mới thành công");
+        }
       }
 
       setIsModalVisible(false);
@@ -251,6 +340,10 @@ const HouseholdManagement = () => {
       fetchHouseholds(); // Refresh list
     } catch (error) {
       console.error("Error saving household:", error);
+      console.error("Error response:", error.response?.data);
+      console.error("Error status:", error.response?.status);
+      console.error("Error message:", error.message);
+
       const errorMsg = error.response?.data?.message || error.message;
       message.error(
         editingHousehold
@@ -315,6 +408,198 @@ const HouseholdManagement = () => {
           />
         </Card>
 
+        {/* View Modal */}
+        <Modal
+          title={
+            <Space>
+              <TeamOutlined style={{ fontSize: "24px", color: "#1890ff" }} />
+              <span>Chi Tiết Hộ Khẩu - {viewingHousehold?.id}</span>
+            </Space>
+          }
+          open={isViewModalVisible}
+          onCancel={() => setIsViewModalVisible(false)}
+          footer={[
+            <Button key="close" onClick={() => setIsViewModalVisible(false)}>
+              Đóng
+            </Button>,
+            <Button
+              key="edit"
+              type="primary"
+              icon={<EditOutlined />}
+              onClick={() => {
+                setIsViewModalVisible(false);
+                handleEdit(viewingHousehold);
+              }}
+            >
+              Chỉnh sửa
+            </Button>,
+          ]}
+          width={900}
+        >
+          {viewingHousehold && (
+            <div style={{ padding: "10px 0" }}>
+              <Card
+                title={
+                  <Space>
+                    <HomeOutlined />
+                    <span>Thông tin hộ khẩu</span>
+                  </Space>
+                }
+                bordered={false}
+                style={{ marginBottom: 16 }}
+              >
+                <Descriptions column={2} bordered>
+                  <Descriptions.Item label="Mã hộ khẩu" span={1}>
+                    <Tag color="blue" style={{ fontSize: "14px" }}>
+                      {viewingHousehold.id}
+                    </Tag>
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Trạng thái" span={1}>
+                    {(() => {
+                      const statusConfig = {
+                        ACTIVE: { color: "green", text: "Hoạt động" },
+                        MOVED: { color: "orange", text: "Đã chuyển đi" },
+                        SPLIT: { color: "blue", text: "Đã tách hộ" },
+                        MERGED: { color: "purple", text: "Đã gộp hộ" },
+                        INACTIVE: { color: "default", text: "Không hoạt động" },
+                      };
+                      const config = statusConfig[viewingHousehold.status] || {
+                        color: "default",
+                        text: viewingHousehold.status,
+                      };
+                      return (
+                        <Tag color={config.color} style={{ fontSize: "14px" }}>
+                          {config.text}
+                        </Tag>
+                      );
+                    })()}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Chủ hộ" span={1}>
+                    <Space>
+                      <UserOutlined />
+                      <strong>{viewingHousehold.headOfHousehold}</strong>
+                    </Space>
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Số điện thoại" span={1}>
+                    <Space>
+                      <PhoneOutlined />
+                      {viewingHousehold.phone || (
+                        <Tag color="default">Chưa có</Tag>
+                      )}
+                    </Space>
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Địa chỉ" span={2}>
+                    <Space>
+                      <EnvironmentOutlined />
+                      {viewingHousehold.address}
+                    </Space>
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Số thành viên" span={2}>
+                    <Tag color="blue" style={{ fontSize: "14px" }}>
+                      {viewingHousehold.members} người
+                    </Tag>
+                  </Descriptions.Item>
+                </Descriptions>
+              </Card>
+
+              <Card
+                title={
+                  <Space>
+                    <TeamOutlined />
+                    <span>
+                      Danh sách thành viên (
+                      {viewingHousehold.membersList?.length || 0} người)
+                    </span>
+                  </Space>
+                }
+                bordered={false}
+              >
+                {viewingHousehold.membersList &&
+                viewingHousehold.membersList.length > 0 ? (
+                  <List
+                    dataSource={viewingHousehold.membersList}
+                    renderItem={(member, index) => (
+                      <List.Item
+                        key={member._id}
+                        style={{
+                          padding: "12px",
+                          borderRadius: "8px",
+                          marginBottom: "8px",
+                          backgroundColor:
+                            member._id === viewingHousehold.headId
+                              ? "#e6f7ff"
+                              : "#fafafa",
+                        }}
+                      >
+                        <List.Item.Meta
+                          avatar={
+                            <Avatar
+                              icon={
+                                member.gender === "MALE" ? (
+                                  <ManOutlined />
+                                ) : (
+                                  <WomanOutlined />
+                                )
+                              }
+                              style={{
+                                backgroundColor:
+                                  member.gender === "MALE"
+                                    ? "#1890ff"
+                                    : "#eb2f96",
+                              }}
+                            />
+                          }
+                          title={
+                            <Space>
+                              <strong>{member.fullName}</strong>
+                              {member._id === viewingHousehold.headId && (
+                                <Tag color="gold">Chủ hộ</Tag>
+                              )}
+                              {member.relationshipToHead && (
+                                <Tag color="purple">
+                                  {member.relationshipToHead}
+                                </Tag>
+                              )}
+                            </Space>
+                          }
+                          description={
+                            <Space split="|">
+                              <span>
+                                {member.gender === "MALE"
+                                  ? "Nam"
+                                  : member.gender === "FEMALE"
+                                  ? "Nữ"
+                                  : "Khác"}
+                              </span>
+                              {member.nationalId && (
+                                <span>CCCD: {member.nationalId}</span>
+                              )}
+                              {member.phone && <span>SĐT: {member.phone}</span>}
+                            </Space>
+                          }
+                        />
+                      </List.Item>
+                    )}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      textAlign: "center",
+                      padding: "40px",
+                      color: "#999",
+                    }}
+                  >
+                    <TeamOutlined
+                      style={{ fontSize: "48px", marginBottom: "16px" }}
+                    />
+                    <div>Chưa có thành viên nào</div>
+                  </div>
+                )}
+              </Card>
+            </div>
+          )}
+        </Modal>
+
         {/* Add/Edit Modal */}
         <Modal
           title={editingHousehold ? "Chỉnh sửa hộ khẩu" : "Thêm hộ khẩu mới"}
@@ -348,11 +633,21 @@ const HouseholdManagement = () => {
                 filterOption={(input, option) =>
                   option.children.toLowerCase().includes(input.toLowerCase())
                 }
+                onChange={(headId) => {
+                  // Tự động fill số điện thoại từ chủ hộ
+                  const selectedCitizen = citizens.find(
+                    (c) => c._id === headId
+                  );
+                  if (selectedCitizen?.phone) {
+                    form.setFieldsValue({ phone: selectedCitizen.phone });
+                  }
+                }}
               >
                 {Array.isArray(citizens) &&
                   citizens.map((c) => (
                     <Option key={c._id} value={c._id}>
                       {c.fullName} - {c.nationalId || "Chưa có CCCD"}
+                      {c.phone && ` - ${c.phone}`}
                     </Option>
                   ))}
               </Select>
@@ -390,8 +685,16 @@ const HouseholdManagement = () => {
               </Form.Item>
             </Space>
 
-            <Form.Item name="phone" label="Số điện thoại">
-              <Input placeholder="Nhập số điện thoại (không bắt buộc)" />
+            <Form.Item
+              name="phone"
+              label="Số điện thoại"
+              tooltip="Số điện thoại tự động lấy từ chủ hộ"
+            >
+              <Input
+                placeholder="Tự động lấy từ chủ hộ"
+                disabled
+                style={{ color: "#000" }}
+              />
             </Form.Item>
 
             <Form.Item

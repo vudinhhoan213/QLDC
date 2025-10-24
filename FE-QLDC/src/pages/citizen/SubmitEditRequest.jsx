@@ -8,46 +8,116 @@ import {
   Typography,
   Space,
   message,
-  Upload,
+  Alert,
 } from "antd";
 import {
   FileTextOutlined,
   SendOutlined,
-  UploadOutlined,
+  ArrowLeftOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import Layout from "../../components/Layout";
+import { editRequestService } from "../../services";
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
 const { Option } = Select;
 
 const SubmitEditRequest = () => {
+  const navigate = useNavigate();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
 
   const requestTypes = [
-    { value: "add_member", label: "Thêm nhân khẩu" },
-    { value: "remove_member", label: "Xóa nhân khẩu" },
-    { value: "update_info", label: "Chỉnh sửa thông tin" },
-    { value: "split_household", label: "Tách hộ khẩu" },
-    { value: "temporary_absence", label: "Tạm vắng" },
-    { value: "temporary_residence", label: "Tạm trú" },
-    { value: "other", label: "Khác" },
+    { value: "ADD_MEMBER", label: "Thêm nhân khẩu" },
+    { value: "EDIT_INFO", label: "Chỉnh sửa thông tin" },
+    { value: "REMOVE_MEMBER", label: "Xóa nhân khẩu" },
+    { value: "TEMP_ABSENCE", label: "Đăng ký tạm vắng" },
+    { value: "TEMP_RESIDENCE", label: "Đăng ký tạm trú" },
+    { value: "MOVE_OUT", label: "Chuyển đi" },
+    { value: "MOVE_IN", label: "Chuyển đến" },
+    { value: "OTHER", label: "Khác" },
   ];
 
   const handleSubmit = async (values) => {
-    setLoading(true);
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      console.log("Form values:", values);
-      message.success("Gửi yêu cầu thành công!");
+      setLoading(true);
+      console.log("📤 Submitting request with values:", values);
+
+      const requestData = {
+        requestType: values.requestType,
+        title: values.title,
+        description: values.description,
+        proposedChanges: {
+          details: values.details,
+          ...values,
+        },
+      };
+
+      console.log("📤 Request data:", requestData);
+      const response = await editRequestService.create(requestData);
+      console.log("✅ Response:", response);
+
+      // Reset form trước
       form.resetFields();
-      navigate("/citizen/my-requests");
+
+      // Hiển thị thông báo thành công với nhiều thông tin hơn
+      message.success({
+        content: (
+          <div>
+            <div
+              style={{ fontSize: "16px", fontWeight: "bold", marginBottom: 8 }}
+            >
+              ✅ Gửi yêu cầu thành công!
+            </div>
+            <div style={{ fontSize: "13px" }}>
+              📋 Yêu cầu của bạn đã được gửi đến Tổ trưởng
+            </div>
+            <div style={{ fontSize: "13px", marginTop: 4 }}>
+              🔄 Đang chuyển về trang "Yêu Cầu Của Tôi"...
+            </div>
+          </div>
+        ),
+        duration: 3,
+        style: { marginTop: "20vh" },
+      });
+
+      // Chờ 1 giây để user đọc thông báo, sau đó chuyển trang
+      setTimeout(() => {
+        navigate("/citizen/my-requests", {
+          state: { refresh: true, timestamp: Date.now() },
+        });
+      }, 1500);
     } catch (error) {
-      message.error("Có lỗi xảy ra, vui lòng thử lại");
+      console.error("❌ Error submitting request:", error);
+      console.error("❌ Error response:", error.response);
+      console.error("❌ Error response data:", error.response?.data);
+      console.error("❌ Error message:", error.response?.data?.message);
+
+      let errorMsg = "Có lỗi xảy ra";
+
+      if (error.response) {
+        // Server trả về lỗi
+        errorMsg = error.response.data?.message || error.response.statusText;
+
+        if (error.response.status === 401) {
+          errorMsg = "Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.";
+        } else if (error.response.status === 403) {
+          errorMsg = "Bạn không có quyền thực hiện thao tác này.";
+        }
+      } else if (error.request) {
+        // Request được gửi nhưng không nhận được response
+        errorMsg =
+          "Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng.";
+      } else {
+        // Lỗi khác
+        errorMsg = error.message;
+      }
+
+      message.error({
+        content: `❌ Không thể gửi yêu cầu: ${errorMsg}`,
+        duration: 5,
+      });
     } finally {
       setLoading(false);
     }
@@ -56,21 +126,57 @@ const SubmitEditRequest = () => {
   return (
     <Layout>
       <div>
+        {/* Page Header */}
         <div style={{ marginBottom: 24 }}>
-          <Title level={2} style={{ marginBottom: 8 }}>
+          <Space>
+            <Button
+              icon={<ArrowLeftOutlined />}
+              onClick={() => navigate("/citizen/my-requests")}
+            >
+              Quay lại
+            </Button>
+          </Space>
+          <Title level={2} style={{ marginTop: 16, marginBottom: 8 }}>
             <FileTextOutlined /> Gửi Yêu Cầu Chỉnh Sửa
           </Title>
           <Text type="secondary">
-            Điền thông tin dưới đây để gửi yêu cầu chỉnh sửa hộ khẩu
+            Gửi yêu cầu chỉnh sửa thông tin hộ khẩu/nhân khẩu đến Tổ trưởng
           </Text>
         </div>
 
+        {/* Info Alert */}
+        <Alert
+          message="Lưu ý"
+          description={
+            <div>
+              <p>
+                • Yêu cầu của bạn sẽ được gửi đến Tổ trưởng để xem xét và phê
+                duyệt.
+              </p>
+              <p>
+                • Vui lòng điền đầy đủ thông tin và mô tả rõ ràng nội dung cần
+                chỉnh sửa.
+              </p>
+              <p>
+                • Bạn có thể theo dõi trạng thái yêu cầu tại trang "Yêu Cầu Của
+                Tôi".
+              </p>
+            </div>
+          }
+          type="info"
+          showIcon
+          style={{ marginBottom: 24 }}
+        />
+
+        {/* Request Form */}
         <Card bordered={false}>
           <Form
             form={form}
             layout="vertical"
             onFinish={handleSubmit}
-            requiredMark="optional"
+            initialValues={{
+              requestType: "EDIT_INFO",
+            }}
           >
             <Form.Item
               name="requestType"
@@ -79,66 +185,55 @@ const SubmitEditRequest = () => {
                 { required: true, message: "Vui lòng chọn loại yêu cầu" },
               ]}
             >
-              <Select
-                size="large"
-                placeholder="Chọn loại yêu cầu"
-                options={requestTypes}
-              />
+              <Select placeholder="Chọn loại yêu cầu" size="large">
+                {requestTypes.map((type) => (
+                  <Option key={type.value} value={type.value}>
+                    {type.label}
+                  </Option>
+                ))}
+              </Select>
             </Form.Item>
 
             <Form.Item
               name="title"
               label="Tiêu đề"
-              rules={[{ required: true, message: "Vui lòng nhập tiêu đề" }]}
+              rules={[
+                { required: true, message: "Vui lòng nhập tiêu đề" },
+                { min: 10, message: "Tiêu đề phải có ít nhất 10 ký tự" },
+              ]}
             >
-              <Input size="large" placeholder="Nhập tiêu đề ngắn gọn" />
+              <Input
+                placeholder="Nhập tiêu đề ngắn gọn cho yêu cầu"
+                size="large"
+              />
             </Form.Item>
 
             <Form.Item
               name="description"
               label="Mô tả chi tiết"
               rules={[
-                { required: true, message: "Vui lòng nhập mô tả chi tiết" },
+                { required: true, message: "Vui lòng nhập mô tả" },
                 { min: 20, message: "Mô tả phải có ít nhất 20 ký tự" },
               ]}
             >
               <TextArea
+                placeholder="Mô tả chi tiết nội dung cần chỉnh sửa, lý do và các thông tin liên quan"
                 rows={6}
-                placeholder="Mô tả chi tiết yêu cầu của bạn..."
                 showCount
-                maxLength={500}
+                maxLength={1000}
               />
             </Form.Item>
 
             <Form.Item
-              name="documents"
-              label="Tài liệu đính kèm"
-              extra="Tải lên các giấy tờ liên quan (nếu có)"
+              name="details"
+              label="Nội dung cụ thể (không bắt buộc)"
+              tooltip="Thông tin chi tiết về những gì cần thay đổi"
             >
-              <Upload
-                listType="picture"
-                maxCount={5}
-                beforeUpload={() => false}
-              >
-                <Button icon={<UploadOutlined />}>Chọn file</Button>
-              </Upload>
-            </Form.Item>
-
-            <Form.Item
-              name="phone"
-              label="Số điện thoại liên hệ"
-              rules={[
-                { required: true, message: "Vui lòng nhập số điện thoại" },
-                {
-                  pattern: /^[0-9]{10}$/,
-                  message: "Số điện thoại không hợp lệ",
-                },
-              ]}
-            >
-              <Input
-                size="large"
-                placeholder="Nhập số điện thoại"
-                addonBefore="+84"
+              <TextArea
+                placeholder="VD: Đổi địa chỉ từ '123 ABC' sang '456 XYZ'"
+                rows={4}
+                showCount
+                maxLength={500}
               />
             </Form.Item>
 
@@ -147,8 +242,8 @@ const SubmitEditRequest = () => {
                 <Button
                   type="primary"
                   htmlType="submit"
-                  size="large"
                   icon={<SendOutlined />}
+                  size="large"
                   loading={loading}
                 >
                   Gửi yêu cầu

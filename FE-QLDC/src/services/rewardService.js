@@ -57,7 +57,7 @@ export const rewardService = {
     },
 
     update: async (id, eventData) => {
-      const { data } = await api.put(`/reward-events/${id}`, eventData);
+      const { data } = await api.patch(`/reward-events/${id}`, eventData);
       return data;
     },
 
@@ -126,7 +126,7 @@ export const rewardService = {
     },
 
     update: async (id, achievementData) => {
-      const { data } = await api.put(
+      const { data } = await api.patch(
         `/student-achievements/${id}`,
         achievementData
       );

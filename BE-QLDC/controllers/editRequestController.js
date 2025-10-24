@@ -1,12 +1,101 @@
 const editRequestService = require("../services/editRequestService");
+const { Citizen, EditRequest } = require("../models");
 
 module.exports = {
+  // Get current citizen's requests
+  async getMyRequests(req, res, next) {
+    try {
+      // Tìm citizen của user hiện tại
+      const citizen = await Citizen.findOne({ user: req.user._id });
+
+      if (!citizen) {
+        return res.status(404).json({ message: "Citizen profile not found" });
+      }
+
+      // Lấy tất cả requests của citizen này
+      const requests = await EditRequest.find({ requestedBy: req.user._id })
+        .populate("requestedBy", "fullName username")
+        .populate("reviewedBy", "fullName username")
+        .sort({ createdAt: -1 });
+
+      res.json({ docs: requests, total: requests.length });
+    } catch (err) {
+      next(err);
+    }
+  },
+
   async create(req, res, next) {
     try {
-      const payload = { ...req.body, requestedBy: req.user && req.user._id };
+      console.log("📝 Creating edit request...");
+      console.log("User:", req.user);
+      console.log("Body:", req.body);
+
+      // Tìm citizen của user hiện tại
+      const citizen = await Citizen.findOne({ user: req.user._id });
+
+      if (!citizen) {
+        console.log("❌ Citizen not found for user:", req.user._id);
+        return res.status(404).json({
+          message: "Citizen profile not found",
+          detail: "Vui lòng liên hệ tổ trưởng để được thêm vào hộ khẩu.",
+        });
+      }
+
+      console.log("👤 Found citizen:", citizen._id, citizen.fullName);
+
+      // Chuẩn bị payload với citizen và reason
+      const payload = {
+        ...req.body,
+        requestedBy: req.user._id,
+        citizen: citizen._id,
+        reason:
+          req.body.description ||
+          req.body.reason ||
+          "Yêu cầu chỉnh sửa thông tin",
+      };
+
       const doc = await editRequestService.create(payload);
-      res.status(201).json(doc);
+
+      console.log("✅ Edit request created:", doc._id);
+
+      // Tạo notification cho leaders
+      try {
+        const { User, Notification } = require("../models");
+        const leaders = await User.find({ role: "TO_TRUONG" });
+
+        if (leaders.length > 0) {
+          const notifications = leaders.map((leader) => ({
+            toUser: leader._id,
+            fromUser: req.user._id,
+            title: "Yêu Cầu Chỉnh Sửa Mới",
+            message: `${
+              req.user.fullName || req.user.username
+            } đã gửi yêu cầu: ${payload.title || "Chỉnh sửa thông tin"}`,
+            type: "EDIT_REQUEST",
+            entityType: "EditRequest",
+            entityId: doc._id,
+            priority: "NORMAL",
+          }));
+
+          await Notification.insertMany(notifications);
+          console.log(
+            `📬 Created ${notifications.length} notifications for leaders`
+          );
+        } else {
+          console.log("⚠️ No leaders found to notify");
+        }
+      } catch (notifError) {
+        console.error("❌ Error creating notifications:", notifError);
+        // Không throw error, request đã tạo thành công
+      }
+
+      res.status(201).json({
+        success: true,
+        message: "Yêu cầu đã được gửi thành công",
+        data: doc,
+      });
     } catch (err) {
+      console.error("❌ Error creating edit request:", err);
       next(err);
     }
   },

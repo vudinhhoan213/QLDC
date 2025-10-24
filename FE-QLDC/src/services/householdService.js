@@ -21,7 +21,7 @@ export const householdService = {
 
   // Update household
   update: async (id, householdData) => {
-    const { data } = await api.put(`/households/${id}`, householdData);
+    const { data } = await api.patch(`/households/${id}`, householdData);
     return data;
   },
 

@@ -1,6 +1,10 @@
 import { useState } from "react";
-import { Form, Input, Button, Card, Typography, message } from "antd";
-import { UserOutlined, LockOutlined } from "@ant-design/icons";
+import { Form, Input, Button, Card, Typography, message, Alert } from "antd";
+import {
+  UserOutlined,
+  LockOutlined,
+  InfoCircleOutlined,
+} from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 
@@ -25,10 +29,28 @@ const LoginPage = () => {
       const isLeader = user.role === "TO_TRUONG";
       navigate(isLeader ? "/leader/dashboard" : "/citizen/dashboard");
     } catch (error) {
-      message.error(
-        error?.response?.data?.message ||
-          "Đăng nhập thất bại. Vui lòng thử lại!"
-      );
+      console.error("Login error:", error);
+      const errorData = error?.response?.data;
+      const errorMsg =
+        errorData?.message || "Đăng nhập thất bại. Vui lòng thử lại!";
+      const errorDetail = errorData?.detail;
+
+      if (errorDetail) {
+        // Hiển thị message với detail
+        message.error({
+          content: (
+            <div>
+              <div>{errorMsg}</div>
+              <div style={{ fontSize: "13px", marginTop: 8, color: "#999" }}>
+                {errorDetail}
+              </div>
+            </div>
+          ),
+          duration: 6,
+        });
+      } else {
+        message.error(errorMsg);
+      }
     } finally {
       setLoading(false);
     }
@@ -65,12 +87,31 @@ const LoginPage = () => {
           boxShadow: "0 8px 24px rgba(0,0,0,0.15)",
         }}
       >
-        <div style={{ textAlign: "center", marginBottom: 32 }}>
+        <div style={{ textAlign: "center", marginBottom: 24 }}>
           <Title level={2} style={{ marginBottom: 8 }}>
             Quản Lý Dân Cư
           </Title>
           <Text type="secondary">Đăng nhập vào hệ thống</Text>
         </div>
+
+        {/* Thông báo đăng nhập */}
+        <Alert
+          message={
+            <span>
+              <InfoCircleOutlined /> Thông tin đăng nhập
+            </span>
+          }
+          description={
+            <div style={{ fontSize: "13px" }}>
+              <div style={{ color: "#ff4d4f" }}>
+                ⚠️ <strong>Lưu ý:</strong> Chỉ chủ hộ mới có tài khoản đăng nhập
+              </div>
+            </div>
+          }
+          type="info"
+          showIcon={false}
+          style={{ marginBottom: 24, textAlign: "left" }}
+        />
 
         <Form
           name="login"

@@ -1,7 +1,7 @@
 const express = require("express");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const { User } = require("../models");
+const { User, Citizen } = require("../models");
 const { authenticate } = require("../middleware/auth");
 
 const router = express.Router();
@@ -23,7 +23,23 @@ router.post("/login", async (req, res, next) => {
     });
 
     if (!user) {
-      return res.status(401).json({ message: "Invalid credentials" });
+      // Kiểm tra xem có phải số điện thoại của nhân khẩu không phải chủ hộ không
+      const nonHeadCitizen = await Citizen.findOne({
+        phone: identifier,
+        isHead: { $ne: true },
+      });
+
+      if (nonHeadCitizen) {
+        return res.status(401).json({
+          message: "Tài khoản không tồn tại",
+          detail:
+            "Chỉ chủ hộ mới có tài khoản đăng nhập. Vui lòng liên hệ chủ hộ hoặc tổ trưởng.",
+        });
+      }
+
+      return res.status(401).json({
+        message: "Tài khoản hoặc mật khẩu không đúng",
+      });
     }
 
     const ok = await bcrypt.compare(password, user.passwordHash);

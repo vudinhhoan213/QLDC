@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 const { Schema, model } = mongoose;
 
 const addressSchema = new Schema(
@@ -15,12 +15,13 @@ const householdSchema = new Schema(
   {
     code: { type: String, required: true, unique: true, trim: true }, // Mã số hộ khẩu
     address: addressSchema,
-    head: { type: Schema.Types.ObjectId, ref: 'Citizen', required: true }, // Chủ hộ
-    members: [{ type: Schema.Types.ObjectId, ref: 'Citizen' }],
+    head: { type: Schema.Types.ObjectId, ref: "Citizen", required: true }, // Chủ hộ
+    members: [{ type: Schema.Types.ObjectId, ref: "Citizen" }],
+    phone: { type: String, trim: true }, // Số điện thoại hộ khẩu
     status: {
       type: String,
-      enum: ['ACTIVE', 'MOVED', 'SPLIT', 'MERGED', 'INACTIVE'],
-      default: 'ACTIVE',
+      enum: ["ACTIVE", "MOVED", "SPLIT", "MERGED", "INACTIVE"],
+      default: "ACTIVE",
       index: true,
     },
     establishedAt: { type: Date },
@@ -32,5 +33,4 @@ const householdSchema = new Schema(
 
 householdSchema.index({ code: 1 }, { unique: true });
 
-module.exports = model('Household', householdSchema);
-
+module.exports = model("Household", householdSchema);

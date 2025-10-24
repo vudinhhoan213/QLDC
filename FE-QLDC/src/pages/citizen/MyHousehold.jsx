@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   Card,
   Descriptions,
@@ -8,6 +8,9 @@ import {
   Space,
   Avatar,
   Divider,
+  Spin,
+  Alert,
+  message,
 } from "antd";
 import {
   TeamOutlined,
@@ -18,63 +21,108 @@ import {
   WomanOutlined,
 } from "@ant-design/icons";
 import Layout from "../../components/Layout";
+import { citizenService } from "../../services";
 import dayjs from "dayjs";
 
 const { Title, Text } = Typography;
 
 const MyHousehold = () => {
-  // Mock data
-  const householdInfo = {
-    id: "HK-001",
-    headOfHousehold: "Nguyễn Văn A",
-    address: "123 Đường ABC, Phường 1, Quận 1, TP.HCM",
-    phone: "0123456789",
-    registrationDate: "2020-01-15",
-    status: "active",
+  const [loading, setLoading] = useState(true);
+  const [household, setHousehold] = useState(null);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    fetchHouseholdData();
+  }, []);
+
+  const fetchHouseholdData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Fetch cả household và thông tin cá nhân
+      const [householdData, citizenData] = await Promise.all([
+        citizenService.getMyHousehold(),
+        citizenService.getMe().catch(() => null), // Không fail nếu không có citizen info
+      ]);
+
+      // Combine data
+      const combinedData = {
+        ...householdData,
+        currentCitizen: citizenData, // Thông tin chủ hộ đang login
+      };
+
+      console.log("📊 Household data:", combinedData);
+      setHousehold(combinedData);
+    } catch (err) {
+      console.error("Error fetching household:", err);
+      const errorMsg =
+        err.response?.data?.message ||
+        err.message ||
+        "Không thể tải thông tin hộ khẩu";
+      setError(errorMsg);
+      message.error(errorMsg);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const members = [
-    {
-      key: "1",
-      id: "NK-001",
-      fullName: "Nguyễn Văn A",
-      dateOfBirth: "1990-01-15",
-      gender: "Nam",
-      idCard: "001234567890",
-      relationship: "Chủ hộ",
-      phone: "0123456789",
-    },
-    {
-      key: "2",
-      id: "NK-002",
-      fullName: "Trần Thị B",
-      dateOfBirth: "1992-05-20",
-      gender: "Nữ",
-      idCard: "001234567891",
-      relationship: "Vợ",
-      phone: "0987654321",
-    },
-    {
-      key: "3",
-      id: "NK-003",
-      fullName: "Nguyễn Văn C",
-      dateOfBirth: "2015-08-10",
-      gender: "Nam",
-      idCard: "",
-      relationship: "Con",
-      phone: "",
-    },
-    {
-      key: "4",
-      id: "NK-004",
-      fullName: "Nguyễn Thị D",
-      dateOfBirth: "2018-03-25",
-      gender: "Nữ",
-      idCard: "",
-      relationship: "Con",
-      phone: "",
-    },
-  ];
+  if (loading) {
+    return (
+      <Layout>
+        <div style={{ textAlign: "center", padding: "100px 0" }}>
+          <Spin size="large" tip="Đang tải thông tin hộ khẩu..." />
+        </div>
+      </Layout>
+    );
+  }
+
+  if (error || !household) {
+    return (
+      <Layout>
+        <Alert
+          message="Không tìm thấy thông tin hộ khẩu"
+          description={
+            error ||
+            "Bạn chưa được gán vào hộ khẩu nào. Vui lòng liên hệ quản lý để được hỗ trợ."
+          }
+          type="warning"
+          showIcon
+        />
+      </Layout>
+    );
+  }
+
+  // Map household data
+  const householdInfo = {
+    id: household.code || household._id,
+    headOfHousehold: household.head?.fullName || "N/A",
+    address: household.address
+      ? `${household.address.street || ""}, ${household.address.ward || ""}, ${
+          household.address.district || ""
+        }, ${household.address.city || ""}`.replace(/^,\s*|,\s*,/g, "")
+      : "N/A",
+    phone: household.phone || "N/A",
+    registrationDate: household.createdAt,
+    status: household.status,
+  };
+
+  // Map members data
+  const members = (household.members || []).map((member) => ({
+    key: member._id,
+    id: member.code || member._id,
+    fullName: member.fullName,
+    dateOfBirth: member.dateOfBirth,
+    gender:
+      member.gender === "MALE"
+        ? "Nam"
+        : member.gender === "FEMALE"
+        ? "Nữ"
+        : "Khác",
+    idCard: member.nationalId,
+    relationship: member.relationshipToHead || "N/A",
+    phone: member.phone,
+  }));
 
   const columns = [
     {
@@ -127,6 +175,9 @@ const MyHousehold = () => {
     },
   ];
 
+  // Thông tin chủ hộ đang login
+  const currentCitizen = household.currentCitizen;
+
   return (
     <Layout>
       <div>
@@ -136,54 +187,58 @@ const MyHousehold = () => {
           </Title>
         </div>
 
-        {/* Household Info Card */}
-        <Card
-          title={
-            <Space>
-              <EnvironmentOutlined />
-              <span>Thông tin hộ khẩu</span>
-            </Space>
-          }
-          bordered={false}
-          style={{ marginBottom: 16 }}
-        >
-          <Descriptions bordered column={2}>
-            <Descriptions.Item label="Mã hộ khẩu" span={2}>
-              <Text strong style={{ fontSize: 16 }}>
-                {householdInfo.id}
-              </Text>
-            </Descriptions.Item>
-            <Descriptions.Item label="Chủ hộ">
+        {/* Thông tin cá nhân của chủ hộ */}
+        {currentCitizen && (
+          <Card
+            title={
               <Space>
                 <UserOutlined />
-                {householdInfo.headOfHousehold}
+                <span>Thông tin cá nhân</span>
               </Space>
-            </Descriptions.Item>
-            <Descriptions.Item label="Số điện thoại">
-              <Space>
-                <PhoneOutlined />
-                {householdInfo.phone}
-              </Space>
-            </Descriptions.Item>
-            <Descriptions.Item label="Địa chỉ" span={2}>
-              <Space>
-                <EnvironmentOutlined />
-                {householdInfo.address}
-              </Space>
-            </Descriptions.Item>
-            <Descriptions.Item label="Ngày đăng ký">
-              {dayjs(householdInfo.registrationDate).format("DD/MM/YYYY")}
-            </Descriptions.Item>
-            <Descriptions.Item label="Trạng thái">
-              <Tag color="green">Hoạt động</Tag>
-            </Descriptions.Item>
-            <Descriptions.Item label="Tổng thành viên" span={2}>
-              <Text strong style={{ fontSize: 18, color: "#1890ff" }}>
-                {members.length} người
-              </Text>
-            </Descriptions.Item>
-          </Descriptions>
-        </Card>
+            }
+            bordered={false}
+            style={{ marginBottom: 16 }}
+          >
+            <Descriptions bordered column={2}>
+              <Descriptions.Item label="Họ và tên">
+                <Text strong style={{ fontSize: 16 }}>
+                  {currentCitizen.fullName}
+                </Text>
+              </Descriptions.Item>
+              <Descriptions.Item label="Mã nhân khẩu">
+                <Tag color="blue">
+                  {currentCitizen.code || currentCitizen._id}
+                </Tag>
+              </Descriptions.Item>
+              <Descriptions.Item label="Ngày sinh">
+                {dayjs(currentCitizen.dateOfBirth).format("DD/MM/YYYY")}
+              </Descriptions.Item>
+              <Descriptions.Item label="Giới tính">
+                <Tag color={currentCitizen.gender === "MALE" ? "blue" : "pink"}>
+                  {currentCitizen.gender === "MALE"
+                    ? "Nam"
+                    : currentCitizen.gender === "FEMALE"
+                    ? "Nữ"
+                    : "Khác"}
+                </Tag>
+              </Descriptions.Item>
+              <Descriptions.Item label="CCCD/CMND">
+                {currentCitizen.nationalId || (
+                  <Tag color="default">Chưa có</Tag>
+                )}
+              </Descriptions.Item>
+              <Descriptions.Item label="Số điện thoại">
+                {currentCitizen.phone || <Tag color="default">Chưa có</Tag>}
+              </Descriptions.Item>
+              <Descriptions.Item label="Ngày đăng ký">
+                {dayjs(householdInfo.registrationDate).format("DD/MM/YYYY")}
+              </Descriptions.Item>
+              <Descriptions.Item label="Vai trò" span={2}>
+                <Tag color="gold">Chủ hộ</Tag>
+              </Descriptions.Item>
+            </Descriptions>
+          </Card>
+        )}
 
         <Divider />
 

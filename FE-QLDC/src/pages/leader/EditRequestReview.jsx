@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Card,
   Table,
@@ -11,6 +11,7 @@ import {
   message,
   Descriptions,
   Select,
+  Spin,
 } from "antd";
 import {
   SearchOutlined,
@@ -20,6 +21,7 @@ import {
   ClockCircleOutlined,
 } from "@ant-design/icons";
 import Layout from "../../components/Layout";
+import { editRequestService } from "../../services/editRequestService";
 import dayjs from "dayjs";
 
 const { Title, Text } = Typography;
@@ -34,56 +36,52 @@ const EditRequestReview = () => {
   const [reviewModalVisible, setReviewModalVisible] = useState(false);
   const [currentRequest, setCurrentRequest] = useState(null);
   const [reviewNote, setReviewNote] = useState("");
+  const [requests, setRequests] = useState([]);
 
-  // Mock data
-  const [requests, setRequests] = useState([
-    {
-      key: "1",
-      id: "REQ-001",
-      citizen: "Nguyễn Văn A",
-      household: "HK-001",
-      type: "Thêm nhân khẩu",
-      description: "Thêm con mới sinh vào hộ khẩu",
-      submitDate: "2024-10-20",
-      status: "pending",
-    },
-    {
-      key: "2",
-      id: "REQ-002",
-      citizen: "Trần Thị B",
-      household: "HK-002",
-      type: "Chỉnh sửa thông tin",
-      description: "Cập nhật số CCCD mới",
-      submitDate: "2024-10-19",
-      status: "pending",
-    },
-    {
-      key: "3",
-      id: "REQ-003",
-      citizen: "Lê Văn C",
-      household: "HK-003",
-      type: "Tách hộ khẩu",
-      description: "Tách hộ do kết hôn",
-      submitDate: "2024-10-18",
-      status: "approved",
-      reviewDate: "2024-10-19",
-      reviewer: "Admin",
-      reviewNote: "Đã kiểm tra đầy đủ giấy tờ",
-    },
-    {
-      key: "4",
-      id: "REQ-004",
-      citizen: "Phạm Thị D",
-      household: "HK-001",
-      type: "Tạm vắng",
-      description: "Đi công tác dài hạn 6 tháng",
-      submitDate: "2024-10-17",
-      status: "rejected",
-      reviewDate: "2024-10-18",
-      reviewer: "Admin",
-      reviewNote: "Thiếu giấy xác nhận từ công ty",
-    },
-  ]);
+  // Fetch requests from backend
+  const fetchRequests = async () => {
+    try {
+      setLoading(true);
+      console.log("📋 Fetching edit requests...");
+
+      const response = await editRequestService.getAll();
+      console.log("📋 Requests response:", response);
+
+      // Backend trả về { docs, total, page, limit }
+      const requestList = response.docs || [];
+
+      // Transform data to match table format
+      const transformedRequests = requestList.map((req) => ({
+        key: req._id,
+        _id: req._id,
+        id: req._id.slice(-8).toUpperCase(), // Mã ngắn gọn từ _id
+        citizen: req.citizen?.fullName || req.requestedBy?.fullName || "N/A",
+        citizenId: req.citizen?._id,
+        household: req.citizen?.household?.code || "N/A",
+        householdId: req.citizen?.household?._id,
+        type: req.title || "Chỉnh sửa thông tin",
+        description: req.reason || req.description || "N/A",
+        proposedChanges: req.proposedChanges,
+        submitDate: req.createdAt,
+        status: req.status.toLowerCase(), // PENDING -> pending
+        reviewDate: req.reviewedAt,
+        reviewer: req.reviewedBy?.fullName || req.reviewedBy?.username,
+        reviewNote: req.rejectionReason || "N/A",
+      }));
+
+      setRequests(transformedRequests);
+      console.log(`✅ Loaded ${transformedRequests.length} requests`);
+    } catch (error) {
+      console.error("❌ Error fetching requests:", error);
+      message.error("Không thể tải danh sách yêu cầu. Vui lòng thử lại!");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchRequests();
+  }, []);
 
   const statusConfig = {
     pending: {
@@ -194,29 +192,45 @@ const EditRequestReview = () => {
     setReviewModalVisible(true);
   };
 
-  const handleReviewConfirm = () => {
-    const updatedRequests = requests.map((req) => {
-      if (req.key === currentRequest.key) {
-        return {
-          ...req,
-          status: currentRequest.reviewAction,
-          reviewDate: dayjs().format("YYYY-MM-DD"),
-          reviewer: "Admin", // Thay bằng user hiện tại
-          reviewNote: reviewNote,
-        };
-      }
-      return req;
-    });
+  const handleReviewConfirm = async () => {
+    try {
+      setLoading(true);
+      console.log(
+        `🔄 ${
+          currentRequest.reviewAction === "approved" ? "Approving" : "Rejecting"
+        } request:`,
+        currentRequest._id
+      );
 
-    setRequests(updatedRequests);
-    message.success(
-      currentRequest.reviewAction === "approved"
-        ? "Đã duyệt yêu cầu thành công"
-        : "Đã từ chối yêu cầu"
-    );
-    setReviewModalVisible(false);
-    setCurrentRequest(null);
-    setReviewNote("");
+      if (currentRequest.reviewAction === "approved") {
+        // Gọi API approve
+        await editRequestService.approve(currentRequest._id, {
+          note: reviewNote || "Đã duyệt",
+        });
+        message.success("✅ Đã duyệt yêu cầu thành công");
+      } else {
+        // Gọi API reject
+        await editRequestService.reject(currentRequest._id, {
+          reason: reviewNote || "Từ chối yêu cầu",
+        });
+        message.success("✅ Đã từ chối yêu cầu");
+      }
+
+      // Reload danh sách
+      await fetchRequests();
+
+      setReviewModalVisible(false);
+      setCurrentRequest(null);
+      setReviewNote("");
+    } catch (error) {
+      console.error("❌ Error reviewing request:", error);
+      message.error(
+        error.response?.data?.message ||
+          "Không thể xử lý yêu cầu. Vui lòng thử lại!"
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   const filteredRequests = requests.filter((req) => {
@@ -327,7 +341,7 @@ const EditRequestReview = () => {
               Đóng
             </Button>,
           ]}
-          width={700}
+          width={800}
         >
           {currentRequest && (
             <Descriptions bordered column={2}>
@@ -343,11 +357,26 @@ const EditRequestReview = () => {
               <Descriptions.Item label="Loại yêu cầu" span={2}>
                 <Tag color="blue">{currentRequest.type}</Tag>
               </Descriptions.Item>
-              <Descriptions.Item label="Mô tả" span={2}>
+              <Descriptions.Item label="Lý do" span={2}>
                 {currentRequest.description}
               </Descriptions.Item>
+              {currentRequest.proposedChanges && (
+                <Descriptions.Item label="Thông tin đề xuất thay đổi" span={2}>
+                  <pre
+                    style={{
+                      background: "#f5f5f5",
+                      padding: 12,
+                      borderRadius: 4,
+                      maxHeight: 200,
+                      overflow: "auto",
+                    }}
+                  >
+                    {JSON.stringify(currentRequest.proposedChanges, null, 2)}
+                  </pre>
+                </Descriptions.Item>
+              )}
               <Descriptions.Item label="Ngày gửi">
-                {dayjs(currentRequest.submitDate).format("DD/MM/YYYY")}
+                {dayjs(currentRequest.submitDate).format("DD/MM/YYYY HH:mm")}
               </Descriptions.Item>
               <Descriptions.Item label="Trạng thái">
                 {statusConfig[currentRequest.status] && (
@@ -362,13 +391,15 @@ const EditRequestReview = () => {
               {currentRequest.reviewDate && (
                 <>
                   <Descriptions.Item label="Ngày duyệt">
-                    {dayjs(currentRequest.reviewDate).format("DD/MM/YYYY")}
+                    {dayjs(currentRequest.reviewDate).format(
+                      "DD/MM/YYYY HH:mm"
+                    )}
                   </Descriptions.Item>
                   <Descriptions.Item label="Người duyệt">
-                    {currentRequest.reviewer}
+                    {currentRequest.reviewer || "N/A"}
                   </Descriptions.Item>
                   <Descriptions.Item label="Ghi chú" span={2}>
-                    {currentRequest.reviewNote}
+                    {currentRequest.reviewNote || "Không có"}
                   </Descriptions.Item>
                 </>
               )}

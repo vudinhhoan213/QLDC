@@ -1,6 +1,18 @@
 import api from "../lib/api";
 
 export const citizenService = {
+  // Get current citizen info
+  getMe: async () => {
+    const { data } = await api.get("/citizens/me");
+    return data;
+  },
+
+  // Get current citizen's household
+  getMyHousehold: async () => {
+    const { data } = await api.get("/citizens/me/household");
+    return data;
+  },
+
   // Get all citizens
   getAll: async (params = {}) => {
     const { data } = await api.get("/citizens", { params });
@@ -21,7 +33,7 @@ export const citizenService = {
 
   // Update citizen
   update: async (id, citizenData) => {
-    const { data } = await api.put(`/citizens/${id}`, citizenData);
+    const { data } = await api.patch(`/citizens/${id}`, citizenData);
     return data;
   },
 

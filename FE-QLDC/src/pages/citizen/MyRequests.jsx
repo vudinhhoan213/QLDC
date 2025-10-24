@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Card,
   Table,
@@ -9,6 +9,9 @@ import {
   Empty,
   Modal,
   Descriptions,
+  Spin,
+  Alert,
+  message,
 } from "antd";
 import {
   FileTextOutlined,
@@ -18,108 +21,122 @@ import {
   CloseCircleOutlined,
   PlusOutlined,
 } from "@ant-design/icons";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import Layout from "../../components/Layout";
+import { editRequestService } from "../../services";
 import dayjs from "dayjs";
 
 const { Title, Text } = Typography;
 
 const MyRequests = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const [loading, setLoading] = useState(true);
+  const [requests, setRequests] = useState([]);
   const [viewModalVisible, setViewModalVisible] = useState(false);
   const [currentRequest, setCurrentRequest] = useState(null);
 
-  // Mock data
-  const requests = [
-    {
-      key: "1",
-      id: "REQ-001",
-      type: "Thêm nhân khẩu",
-      title: "Thêm con mới sinh",
-      description: "Thêm con mới sinh vào hộ khẩu",
-      submitDate: "2024-10-20",
-      status: "pending",
-    },
-    {
-      key: "2",
-      id: "REQ-002",
-      type: "Chỉnh sửa thông tin",
-      title: "Cập nhật số CCCD",
-      description: "Cập nhật số CCCD mới sau khi đổi",
-      submitDate: "2024-10-15",
-      status: "approved",
-      reviewDate: "2024-10-16",
-      reviewer: "Tổ trưởng",
-      reviewNote: "Đã kiểm tra và phê duyệt",
-    },
-    {
-      key: "3",
-      id: "REQ-003",
-      type: "Tạm vắng",
-      title: "Đăng ký tạm vắng",
-      description: "Đi công tác dài hạn 6 tháng",
-      submitDate: "2024-10-10",
-      status: "rejected",
-      reviewDate: "2024-10-11",
-      reviewer: "Tổ trưởng",
-      reviewNote: "Thiếu giấy xác nhận từ công ty",
-    },
-  ];
+  useEffect(() => {
+    fetchMyRequests();
+  }, []);
+
+  // Reload khi có navigation state từ SubmitEditRequest
+  useEffect(() => {
+    if (location.state?.refresh) {
+      console.log("🔄 Refreshing requests list...");
+      fetchMyRequests();
+      // Clear state để tránh reload liên tục
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
+
+  const fetchMyRequests = async () => {
+    try {
+      setLoading(true);
+      const response = await editRequestService.getMyRequests();
+      const data = response.docs || response || [];
+      setRequests(data);
+    } catch (error) {
+      console.error("Error fetching requests:", error);
+      message.error("Không thể tải danh sách yêu cầu");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const statusConfig = {
-    pending: {
+    PENDING: {
       color: "gold",
       text: "Chờ duyệt",
       icon: <ClockCircleOutlined />,
     },
-    approved: {
+    APPROVED: {
       color: "green",
       text: "Đã duyệt",
       icon: <CheckCircleOutlined />,
     },
-    rejected: {
+    REJECTED: {
       color: "red",
       text: "Từ chối",
       icon: <CloseCircleOutlined />,
     },
   };
 
+  const handleView = (record) => {
+    setCurrentRequest(record);
+    setViewModalVisible(true);
+  };
+
   const columns = [
     {
       title: "Mã yêu cầu",
-      dataIndex: "id",
-      key: "id",
-      render: (text) => <Text strong>{text}</Text>,
+      dataIndex: "_id",
+      key: "_id",
+      render: (text) => <Text strong>{text.substring(0, 8)}...</Text>,
     },
     {
       title: "Loại yêu cầu",
-      dataIndex: "type",
-      key: "type",
-      render: (type) => <Tag color="blue">{type}</Tag>,
+      dataIndex: "requestType",
+      key: "requestType",
+      render: (type) => <Tag color="blue">{type || "Chỉnh sửa"}</Tag>,
     },
     {
       title: "Tiêu đề",
       dataIndex: "title",
       key: "title",
+      ellipsis: true,
     },
     {
       title: "Ngày gửi",
-      dataIndex: "submitDate",
-      key: "submitDate",
+      dataIndex: "createdAt",
+      key: "createdAt",
       render: (date) => dayjs(date).format("DD/MM/YYYY"),
+      sorter: (a, b) => dayjs(a.createdAt).unix() - dayjs(b.createdAt).unix(),
     },
     {
       title: "Trạng thái",
       dataIndex: "status",
       key: "status",
       render: (status) => {
-        const config = statusConfig[status];
+        const config = statusConfig[status] || statusConfig.PENDING;
         return (
-          <Tag color={config.color} icon={config.icon}>
+          <Tag icon={config.icon} color={config.color}>
             {config.text}
           </Tag>
         );
       },
+      filters: [
+        { text: "Chờ duyệt", value: "PENDING" },
+        { text: "Đã duyệt", value: "APPROVED" },
+        { text: "Từ chối", value: "REJECTED" },
+      ],
+      onFilter: (value, record) => record.status === value,
+    },
+    {
+      title: "Ngày duyệt",
+      dataIndex: "reviewedAt",
+      key: "reviewedAt",
+      render: (date) => (date ? dayjs(date).format("DD/MM/YYYY") : "-"),
     },
     {
       title: "Hành động",
@@ -128,6 +145,7 @@ const MyRequests = () => {
       render: (_, record) => (
         <Button
           type="link"
+          size="small"
           icon={<EyeOutlined />}
           onClick={() => handleView(record)}
         >
@@ -137,110 +155,109 @@ const MyRequests = () => {
     },
   ];
 
-  const handleView = (record) => {
-    setCurrentRequest(record);
-    setViewModalVisible(true);
-  };
-
-  const stats = {
-    total: requests.length,
-    pending: requests.filter((r) => r.status === "pending").length,
-    approved: requests.filter((r) => r.status === "approved").length,
-    rejected: requests.filter((r) => r.status === "rejected").length,
-  };
+  if (loading) {
+    return (
+      <Layout>
+        <div style={{ textAlign: "center", padding: "100px 0" }}>
+          <Spin size="large" tip="Đang tải danh sách yêu cầu..." />
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
       <div>
         {/* Page Header */}
+        <div style={{ marginBottom: 24 }}>
+          <Title level={2} style={{ marginBottom: 8 }}>
+            <FileTextOutlined /> Yêu Cầu Của Tôi
+          </Title>
+        </div>
+
+        {/* Summary Cards */}
         <div
           style={{
-            marginBottom: 24,
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
+            display: "grid",
+            gridTemplateColumns: "repeat(3, 1fr)",
+            gap: 16,
+            marginBottom: 16,
           }}
         >
-          <div>
-            <Title level={2} style={{ marginBottom: 8 }}>
-              <FileTextOutlined /> Yêu Cầu Của Tôi
-            </Title>
-            <Text type="secondary">
-              Danh sách các yêu cầu chỉnh sửa hộ khẩu
-            </Text>
-          </div>
+          <Card>
+            <Space direction="vertical">
+              <Text type="secondary">Tổng số yêu cầu</Text>
+              <Title level={2} style={{ margin: 0 }}>
+                {requests.length}
+              </Title>
+            </Space>
+          </Card>
+          <Card>
+            <Space direction="vertical">
+              <Text type="secondary">Chờ duyệt</Text>
+              <Title level={2} style={{ margin: 0, color: "#faad14" }}>
+                {requests.filter((r) => r.status === "PENDING").length}
+              </Title>
+            </Space>
+          </Card>
+          <Card>
+            <Space direction="vertical">
+              <Text type="secondary">Đã duyệt</Text>
+              <Title level={2} style={{ margin: 0, color: "#52c41a" }}>
+                {requests.filter((r) => r.status === "APPROVED").length}
+              </Title>
+            </Space>
+          </Card>
+        </div>
+
+        {/* Action Button */}
+        <Card bordered={false} style={{ marginBottom: 16 }}>
           <Button
             type="primary"
             icon={<PlusOutlined />}
-            size="large"
             onClick={() => navigate("/citizen/submit-edit-request")}
           >
-            Tạo yêu cầu mới
+            Gửi yêu cầu mới
           </Button>
-        </div>
-
-        {/* Statistics */}
-        <Card bordered={false} style={{ marginBottom: 16 }}>
-          <Space size="large">
-            <div>
-              <Text type="secondary">Tổng yêu cầu</Text>
-              <Title level={3} style={{ margin: 0 }}>
-                {stats.total}
-              </Title>
-            </div>
-            <div>
-              <Text type="secondary">Chờ duyệt</Text>
-              <Title level={3} style={{ margin: 0, color: "#faad14" }}>
-                {stats.pending}
-              </Title>
-            </div>
-            <div>
-              <Text type="secondary">Đã duyệt</Text>
-              <Title level={3} style={{ margin: 0, color: "#52c41a" }}>
-                {stats.approved}
-              </Title>
-            </div>
-            <div>
-              <Text type="secondary">Từ chối</Text>
-              <Title level={3} style={{ margin: 0, color: "#ff4d4f" }}>
-                {stats.rejected}
-              </Title>
-            </div>
-          </Space>
         </Card>
 
-        {/* Table */}
+        {/* Requests Table */}
         <Card bordered={false}>
           {requests.length === 0 ? (
             <Empty
-              description="Bạn chưa có yêu cầu nào"
-              style={{ padding: "60px 0" }}
+              description="Chưa có yêu cầu nào"
+              image={Empty.PRESENTED_IMAGE_SIMPLE}
             >
               <Button
                 type="primary"
                 icon={<PlusOutlined />}
                 onClick={() => navigate("/citizen/submit-edit-request")}
               >
-                Tạo yêu cầu mới
+                Gửi yêu cầu đầu tiên
               </Button>
             </Empty>
           ) : (
             <Table
               columns={columns}
               dataSource={requests}
+              rowKey="_id"
               pagination={{
                 pageSize: 10,
                 showSizeChanger: true,
                 showTotal: (total) => `Tổng ${total} yêu cầu`,
               }}
-              scroll={{ x: 1000 }}
             />
           )}
         </Card>
 
-        {/* View Modal */}
+        {/* View Detail Modal */}
         <Modal
-          title="Chi tiết yêu cầu"
+          title={
+            <Space>
+              <FileTextOutlined />
+              <span>Chi Tiết Yêu Cầu</span>
+            </Space>
+          }
           open={viewModalVisible}
           onCancel={() => setViewModalVisible(false)}
           footer={[
@@ -251,46 +268,74 @@ const MyRequests = () => {
           width={700}
         >
           {currentRequest && (
-            <Descriptions bordered column={2}>
-              <Descriptions.Item label="Mã yêu cầu" span={2}>
-                <Text strong>{currentRequest.id}</Text>
-              </Descriptions.Item>
-              <Descriptions.Item label="Loại yêu cầu" span={2}>
-                <Tag color="blue">{currentRequest.type}</Tag>
-              </Descriptions.Item>
-              <Descriptions.Item label="Tiêu đề" span={2}>
-                {currentRequest.title}
-              </Descriptions.Item>
-              <Descriptions.Item label="Mô tả" span={2}>
-                {currentRequest.description}
-              </Descriptions.Item>
-              <Descriptions.Item label="Ngày gửi">
-                {dayjs(currentRequest.submitDate).format("DD/MM/YYYY")}
-              </Descriptions.Item>
-              <Descriptions.Item label="Trạng thái">
-                {statusConfig[currentRequest.status] && (
-                  <Tag
-                    color={statusConfig[currentRequest.status].color}
-                    icon={statusConfig[currentRequest.status].icon}
-                  >
-                    {statusConfig[currentRequest.status].text}
+            <div>
+              <Descriptions bordered column={1}>
+                <Descriptions.Item label="Mã yêu cầu">
+                  {currentRequest._id}
+                </Descriptions.Item>
+                <Descriptions.Item label="Loại yêu cầu">
+                  <Tag color="blue">
+                    {currentRequest.requestType || "Chỉnh sửa"}
                   </Tag>
+                </Descriptions.Item>
+                <Descriptions.Item label="Tiêu đề">
+                  {currentRequest.title || "N/A"}
+                </Descriptions.Item>
+                <Descriptions.Item label="Mô tả">
+                  {currentRequest.description || "N/A"}
+                </Descriptions.Item>
+                <Descriptions.Item label="Ngày gửi">
+                  {dayjs(currentRequest.createdAt).format("DD/MM/YYYY HH:mm")}
+                </Descriptions.Item>
+                <Descriptions.Item label="Trạng thái">
+                  {(() => {
+                    const config =
+                      statusConfig[currentRequest.status] ||
+                      statusConfig.PENDING;
+                    return (
+                      <Tag icon={config.icon} color={config.color}>
+                        {config.text}
+                      </Tag>
+                    );
+                  })()}
+                </Descriptions.Item>
+                {currentRequest.reviewedAt && (
+                  <>
+                    <Descriptions.Item label="Ngày duyệt">
+                      {dayjs(currentRequest.reviewedAt).format(
+                        "DD/MM/YYYY HH:mm"
+                      )}
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Người duyệt">
+                      {currentRequest.reviewedBy?.fullName || "N/A"}
+                    </Descriptions.Item>
+                    {currentRequest.rejectionReason && (
+                      <Descriptions.Item label="Lý do từ chối">
+                        <Alert
+                          message={currentRequest.rejectionReason}
+                          type="error"
+                          showIcon
+                        />
+                      </Descriptions.Item>
+                    )}
+                  </>
                 )}
-              </Descriptions.Item>
-              {currentRequest.reviewDate && (
-                <>
-                  <Descriptions.Item label="Ngày duyệt">
-                    {dayjs(currentRequest.reviewDate).format("DD/MM/YYYY")}
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Người duyệt">
-                    {currentRequest.reviewer}
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Ghi chú" span={2}>
-                    {currentRequest.reviewNote}
-                  </Descriptions.Item>
-                </>
+              </Descriptions>
+
+              {/* Proposed Changes */}
+              {currentRequest.proposedChanges && (
+                <Card
+                  title="Nội dung thay đổi đề xuất"
+                  style={{ marginTop: 16 }}
+                >
+                  <pre
+                    style={{ whiteSpace: "pre-wrap", wordWrap: "break-word" }}
+                  >
+                    {JSON.stringify(currentRequest.proposedChanges, null, 2)}
+                  </pre>
+                </Card>
               )}
-            </Descriptions>
+            </div>
           )}
         </Modal>
       </div>
@@ -299,4 +344,3 @@ const MyRequests = () => {
 };
 
 export default MyRequests;
-

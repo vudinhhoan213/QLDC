@@ -4,6 +4,10 @@ const { authenticate, isLeader } = require("../middleware/auth");
 
 const router = express.Router();
 
+// Citizen endpoints (must come before /:id)
+router.get("/me", authenticate, citizenController.getMe);
+router.get("/me/household", authenticate, citizenController.getMyHousehold);
+
 // Stats route must come before /:id
 router.get("/stats", authenticate, citizenController.getStats);
 router.get("/", authenticate, citizenController.getAll);

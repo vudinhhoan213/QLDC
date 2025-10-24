@@ -21,7 +21,7 @@ export const editRequestService = {
 
   // Update edit request
   update: async (id, requestData) => {
-    const { data } = await api.put(`/requests/${id}`, requestData);
+    const { data } = await api.patch(`/requests/${id}`, requestData);
     return data;
   },
 
@@ -39,7 +39,7 @@ export const editRequestService = {
 
   // Get my requests (for citizen)
   getMyRequests: async () => {
-    const { data } = await api.get("/requests/my");
+    const { data } = await api.get("/requests/me");
     return data;
   },
 
